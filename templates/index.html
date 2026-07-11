@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fake News Detector</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            background: #0f0c29;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px 20px;
+        }
+
+        /* Floating animated background circles */
+        .bg-circle {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.15;
+            animation: float 8s ease-in-out infinite;
+            pointer-events: none;
+        }
+        .bg-circle.c1 { width: 400px; height: 400px; background: #7c3aed; top: -100px; left: -100px; animation-delay: 0s; }
+        .bg-circle.c2 { width: 300px; height: 300px; background: #2563eb; bottom: -80px; right: -80px; animation-delay: 3s; }
+        .bg-circle.c3 { width: 200px; height: 200px; background: #db2777; top: 50%; left: 50%; animation-delay: 5s; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) scale(1); }
+            50% { transform: translateY(-20px) scale(1.05); }
+        }
+
+        /* Top badge */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: rgba(255,255,255,0.9);
+            padding: 8px 18px;
+            border-radius: 50px;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 24px;
+            backdrop-filter: blur(10px);
+        }
+        .badge .dot {
+            width: 8px; height: 8px;
+            background: #4ade80;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        /* Main heading outside the card */
+        .hero-title {
+            font-size: 42px;
+            font-weight: 800;
+            color: white;
+            text-align: center;
+            margin-bottom: 10px;
+            line-height: 1.2;
+        }
+        .hero-title span {
+            background: linear-gradient(90deg, #a78bfa, #60a5fa, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .hero-sub {
+            color: rgba(255,255,255,0.6);
+            font-size: 16px;
+            text-align: center;
+            margin-bottom: 36px;
+        }
+
+        /* Main card */
+        .card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 24px;
+            padding: 40px;
+            width: 100%;
+            max-width: 720px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 25px 60px rgba(0,0,0,0.4);
+        }
+
+        /* Stats row inside card */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 30px;
+        }
+        .stat {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 14px;
+            padding: 14px;
+            text-align: center;
+        }
+        .stat .num {
+            font-size: 22px;
+            font-weight: 700;
+            color: white;
+        }
+        .stat .lbl {
+            font-size: 11px;
+            color: rgba(255,255,255,0.5);
+            margin-top: 2px;
+        }
+
+        /* Textarea label */
+        .input-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.7);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        /* Input wrapper with glow */
+        .input-wrapper {
+            position: relative;
+            margin-bottom: 16px;
+        }
+        .input-wrapper::before {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: 15px;
+            background: linear-gradient(135deg, #7c3aed, #2563eb);
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 0;
+        }
+        .input-wrapper:focus-within::before { opacity: 1; }
+
+        textarea {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            height: 200px;
+            padding: 16px 18px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 14px;
+            font-size: 14px;
+            font-family: 'Inter', sans-serif;
+            resize: vertical;
+            color: white;
+            line-height: 1.7;
+            transition: all 0.3s;
+        }
+        textarea::placeholder { color: rgba(255,255,255,0.3); }
+        textarea:focus { outline: none; background: rgba(255,255,255,0.1); border-color: transparent; }
+
+        /* Character counter */
+        .char-count {
+            text-align: right;
+            font-size: 12px;
+            color: rgba(255,255,255,0.3);
+            margin-top: 6px;
+            margin-bottom: 16px;
+        }
+
+        /* Submit button */
+        button[type="submit"] {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #7c3aed, #2563eb);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            letter-spacing: 0.02em;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        button[type="submit"]::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: white;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        button[type="submit"]:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(124,58,237,0.5); }
+        button[type="submit"]:hover::after { opacity: 0.05; }
+        button[type="submit"]:active { transform: translateY(0); }
+
+        /* Divider */
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 28px 0;
+            color: rgba(255,255,255,0.2);
+            font-size: 12px;
+        }
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: rgba(255,255,255,0.1);
+        }
+
+        /* Result box */
+        .result {
+            border-radius: 18px;
+            padding: 30px;
+            text-align: center;
+            animation: slideUp 0.4s ease;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .result.real {
+            background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(5,150,105,0.1));
+            border: 1px solid rgba(52,211,153,0.4);
+        }
+        .result.fake {
+            background: linear-gradient(135deg, rgba(239,68,68,0.15), rgba(185,28,28,0.1));
+            border: 1px solid rgba(248,113,113,0.4);
+        }
+
+        .result-icon { font-size: 52px; margin-bottom: 12px; }
+
+        .verdict {
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            margin-bottom: 8px;
+        }
+        .result.real .verdict { color: #34d399; }
+        .result.fake .verdict { color: #f87171; }
+
+        .result-desc {
+            font-size: 14px;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 16px;
+        }
+
+        /* Confidence bar */
+        .conf-label {
+            font-size: 13px;
+            color: rgba(255,255,255,0.6);
+            margin-bottom: 8px;
+        }
+        .conf-bar-bg {
+            background: rgba(255,255,255,0.1);
+            border-radius: 50px;
+            height: 8px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+        .conf-bar-fill {
+            height: 100%;
+            border-radius: 50px;
+            transition: width 1s ease;
+        }
+        .result.real .conf-bar-fill { background: linear-gradient(90deg, #10b981, #34d399); }
+        .result.fake .conf-bar-fill { background: linear-gradient(90deg, #ef4444, #f87171); }
+        .conf-pct {
+            font-size: 13px;
+            font-weight: 700;
+            color: white;
+        }
+
+        /* Tags below result */
+        .result-tags {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 18px;
+            flex-wrap: wrap;
+        }
+        .tag {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: rgba(255,255,255,0.6);
+            font-size: 11px;
+            padding: 4px 12px;
+            border-radius: 50px;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 28px;
+            text-align: center;
+            color: rgba(255,255,255,0.25);
+            font-size: 12px;
+        }
+        .footer strong { color: rgba(255,255,255,0.4); }
+    </style>
+</head>
+<body>
+
+<!-- Animated background -->
+<div class="bg-circle c1"></div>
+<div class="bg-circle c2"></div>
+<div class="bg-circle c3"></div>
+
+<!-- Live badge -->
+<div class="badge">
+    <span class="dot"></span>
+    AI Model Active · 91.71% Accuracy
+</div>
+
+<!-- Hero heading -->
+<h1 class="hero-title">Detect <span>Fake News</span><br>Instantly</h1>
+<p class="hero-sub">Powered by NLP · TF-IDF · Logistic Regression</p>
+
+<!-- Main card -->
+<div class="card">
+
+    <!-- Stats -->
+    <div class="stats">
+        <div class="stat">
+            <div class="num">6,335</div>
+            <div class="lbl">Articles trained on</div>
+        </div>
+        <div class="stat">
+            <div class="num">91.71%</div>
+            <div class="lbl">Model accuracy</div>
+        </div>
+        <div class="stat">
+            <div class="num">5,000</div>
+            <div class="lbl">TF-IDF features</div>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <form action="/" method="POST">
+        <label class="input-label" for="news">📋 Paste your news article</label>
+        <div class="input-wrapper">
+            <textarea
+                id="news"
+                name="news"
+                placeholder="Paste any news article here — headline, body text, or both. The model will analyse the language patterns and tell you if it's likely fake or real..."
+                required
+                oninput="document.getElementById('cc').textContent = this.value.length + ' characters'"
+            >{{ news_text }}</textarea>
+        </div>
+        <div class="char-count"><span id="cc">0 characters</span></div>
+        <button type="submit">🔍 &nbsp; Analyse Article</button>
+    </form>
+
+    {% if result %}
+    <div class="divider">ANALYSIS RESULT</div>
+    <div class="result {{ result|lower }}">
+
+        {% if result == 'REAL' %}
+        <div class="result-icon">✅</div>
+        <div class="verdict">REAL NEWS</div>
+        <div class="result-desc">This article appears to be credible and factual.</div>
+        {% else %}
+        <div class="result-icon">❌</div>
+        <div class="verdict">FAKE NEWS</div>
+        <div class="result-desc">This article shows patterns commonly found in misinformation.</div>
+        {% endif %}
+
+        <div class="conf-label">Model confidence</div>
+        <div class="conf-bar-bg">
+            <div class="conf-bar-fill" style="width: {{ confidence }}%"></div>
+        </div>
+        <div class="conf-pct">{{ confidence }}%</div>
+
+        <div class="result-tags">
+            <span class="tag">NLP Analysis</span>
+            <span class="tag">TF-IDF Vectorized</span>
+            <span class="tag">Logistic Regression</span>
+            <span class="tag">Python · Flask</span>
+        </div>
+
+    </div>
+    {% endif %}
+
+</div>
+
+<div class="footer">
+    Final Year BCA Project &nbsp;·&nbsp; <strong>Fake News Detection Using NLP</strong> &nbsp;·&nbsp; Built with Python
+</div>
+
+</body>
+</html>
